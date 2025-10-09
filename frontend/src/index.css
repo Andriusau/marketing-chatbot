@@ -1,0 +1,7 @@
+/* This file is where we import the Tailwind directives.
+    The build process will replace these directives with all the necessary utility classes.
+*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
