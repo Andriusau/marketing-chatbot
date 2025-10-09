@@ -1,5 +1,7 @@
-#AI Marketing Lead Generation Chatbot
+##  AI Marketing Lead Generation Chatbot
+
 🚀 Overview
+
 This is a modern, full-stack application designed to act as an intelligent, front-line marketing assistant. The system engages website visitors in a conversational manner to qualify leads, gather contact information, and answer initial product questions, utilizing the power of the Gemini AI model.
 
 The architecture uses a high-performance FastAPI backend to handle the AI logic and a responsive React/TypeScript frontend for a seamless user experience.
@@ -103,7 +105,7 @@ Python 3.9+: Required for the FastAPI backend.
 
 Gemini API Key: Obtain a key from Google AI Studio.
 
-1. Backend Setup
+#  1. Backend Setup
 Open your first terminal window and navigate to the backend/ directory:
 
 cd marketing-chatbot-app/backend
