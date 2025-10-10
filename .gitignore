@@ -1,5 +1,8 @@
 /node_modules
 /venv
+/frontend/build
+/backend/pycache
+*.log
 
 # Environment
 .env
