@@ -1,198 +1,200 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { RefreshCw, Send, Loader2, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Send, Loader2, User, Bot, Zap, X } from 'lucide-react';
 
-// Setup Tailwind CSS (assuming a build process handles this, but including the necessary imports/config structure)
-// NOTE: For a single file to run on platforms like Canvas, standard React environment setup is assumed.
+// --- Configuration ---
+// The URL of your running FastAPI server. When deployed, change this to the live backend URL.
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
-/**
- * Defines the structure for a single message in the chat history.
- * Role: 'user' or 'model' (AI)
- * parts: The content of the message
- */
-interface ChatMessage {
-  role: 'user' | 'model';
-  parts: { text: string }[];
-}
+// --- Types ---
+type Message = {
+  id: number;
+  sender: 'user' | 'bot';
+  text: string;
+};
 
-// NOTE: Replace with your actual FastAPI backend URL when deploying.
-// For local development, this is typically http://127.0.0.1:8000
-const API_BASE_URL = 'http://127.0.0.0:8000'; // Placeholder - will fail without a running backend
-
-/**
- * Main application component for the Lead Generation Chatbot.
- */
+// --- Main Component ---
 const App: React.FC = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to the bottom of the chat window whenever messages change
+  // Initial greeting message
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  // Initial welcome message
-  useEffect(() => {
-    setMessages([{ 
-      role: 'model', 
-      parts: [{ text: "Welcome! I'm here to understand your data engineering needs. To start, can you tell me a little about your current biggest technical challenge?" }] 
-    }]);
+    setMessages([
+      { 
+        id: Date.now(), 
+        sender: 'bot', 
+        text: "👋 Hello! I'm your AI Marketing Assistant. I'm here to help you find the best solution for your needs. What can I help you with today?"
+      },
+    ]);
   }, []);
 
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || isLoading) return;
+  // Auto-scroll to the latest message
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  useEffect(scrollToBottom, [messages]);
 
-    const userMessage: ChatMessage = { role: 'user', parts: [{ text }] };
-    setMessages(prev => [...prev, userMessage]);
+  // Function to simulate API call to the FastAPI backend
+  const sendMessage = useCallback(async (userMessage: string) => {
+    if (!userMessage.trim() || isLoading) return;
+
+    const newMessage: Message = { id: Date.now(), sender: 'user', text: userMessage };
+    setMessages((prev) => [...prev, newMessage]);
     setInput('');
     setIsLoading(true);
+    setError(null);
+
+    // Prepare message history for the backend
+    const history = messages.map(m => ({
+      role: m.sender === 'user' ? 'user' : 'model',
+      text: m.text
+    }));
 
     try {
-      // Prepare the history for the backend
-      const historyPayload = messages.map(msg => ({ 
-        role: msg.role, 
-        parts: msg.parts.map(p => ({ text: p.text })) 
-      }));
-      
-      const payload = {
-        message: text,
-        chat_history: historyPayload
-      };
-      
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_message: userMessage, history: history }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
       const data = await response.json();
-      const botResponse: ChatMessage = { role: 'model', parts: [{ text: data.response }] };
       
-      setMessages(prev => [...prev, botResponse]);
-
-    } catch (error) {
-      console.error("Error sending message to API:", error);
-      const errorMessage: ChatMessage = { 
-        role: 'model', 
-        parts: [{ text: "I apologize, there was an issue connecting to the server. Please try again." }] 
+      const botResponse: Message = { 
+        id: Date.now() + 1, 
+        sender: 'bot', 
+        text: data.bot_response || "I'm sorry, I encountered an issue processing that request." 
       };
-      setMessages(prev => [...prev, errorMessage]);
+
+      setMessages((prev) => [...prev, botResponse]);
+
+    } catch (err) {
+      console.error("Chat API Error:", err);
+      setError("❌ Error: Could not reach the backend or Gemini API. Please check your FastAPI server and API key.");
+      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'bot', text: "Service temporarily unavailable. Please try again later." }]);
+
     } finally {
       setIsLoading(false);
     }
   }, [isLoading, messages]);
 
-  const handleSendClick = (e: React.FormEvent) => {
+  // Handler for input submission
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(input);
   };
-  
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage(input);
-    }
-  };
 
-  const resetChat = () => {
-      setMessages([{ 
-        role: 'model', 
-        parts: [{ text: "Chat history cleared. How can I help you scope your next data project?" }] 
-      }]);
-      setInput('');
-  };
+  // --- UI Rendering ---
 
-  /**
-   * Renders a single chat bubble.
-   */
-  const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
-    const isUser = message.role === 'user';
-    const bgColor = isUser ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-800';
-    const alignment = isUser ? 'justify-end' : 'justify-start';
-    const bubbleClass = isUser ? 'rounded-br-none' : 'rounded-tl-none';
-
-    return (
-      <div className={`flex w-full mt-2 ${alignment}`}>
-        <div className={`max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-xl shadow-md ${bgColor} ${bubbleClass}`}>
-          {message.parts.map((part, index) => (
-            <p key={index} className="text-sm font-inter">
-              {part.text}
-            </p>
-          ))}
-        </div>
-      </div>
-    );
-  };
-  
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col h-[80vh]">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-indigo-700 text-white rounded-t-2xl">
-          <div className="flex items-center space-x-3">
-            <MessageSquare className="w-6 h-6" />
-            <h1 className="text-xl font-bold">Data Lead Bot</h1>
-          </div>
-          <button 
-            onClick={resetChat} 
-            className="p-2 rounded-full hover:bg-indigo-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            title="Start New Conversation"
-            disabled={isLoading}
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
+    <div className="flex flex-col min-h-screen bg-gray-50 font-inter">
+      {/* Header */}
+      <header className="w-full bg-white shadow-md p-4 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto flex items-center justify-start">
+          <Zap className="w-6 h-6 text-indigo-600 mr-2" />
+          <h1 className="text-xl font-bold text-gray-800">AI Lead Bot</h1>
         </div>
-        
-        {/* Chat Area */}
-        <div 
-          ref={chatContainerRef} 
-          className="flex-grow p-4 overflow-y-auto space-y-4"
-          style={{ fontFamily: 'Inter, sans-serif' }}
-        >
-          {messages.map((msg, index) => (
-            <ChatBubble key={index} message={msg} />
-          ))}
-          {isLoading && (
-             <div className="flex justify-start w-full mt-2">
-                <div className="max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-xl shadow-md bg-gray-100 text-gray-800 rounded-tl-none">
-                    <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
-                    <span className="text-sm font-inter">Thinking...</span>
+      </header>
+
+      {/* Main Chat Area */}
+      <main className="flex-grow p-4 overflow-y-auto">
+        <div className="max-w-3xl mx-auto flex flex-col space-y-4">
+          
+          {/* Messages */}
+          {messages.map((msg) => (
+            <div 
+              key={msg.id} 
+              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div 
+                className={`flex items-start max-w-xs sm:max-w-md ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+              >
+                {/* Sender Icon */}
+                <div className={`p-2 rounded-full ${msg.sender === 'user' ? 'bg-indigo-100 text-indigo-600 ml-2' : 'bg-green-100 text-green-600 mr-2'}`}>
+                  {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
+
+                {/* Message Bubble */}
+                <div 
+                  className={`p-3 rounded-xl shadow-sm ${
+                    msg.sender === 'user' 
+                      ? 'bg-indigo-600 text-white rounded-br-none' 
+                      : 'bg-white text-gray-800 rounded-tl-none border border-gray-200'
+                  } break-words`}
+                >
+                  {msg.text.split('\n').map((line, index) => (
+                    <p key={index} className="whitespace-pre-wrap">{line}</p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Loading Indicator */}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="flex items-center p-3 bg-white text-gray-600 rounded-xl rounded-tl-none border border-gray-200 shadow-sm">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                <span className="text-sm">Bot is thinking...</span>
+              </div>
             </div>
           )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-red-100 text-red-700 rounded-xl flex items-center justify-between shadow-md">
+              <p className="flex items-center">
+                <X className="w-5 h-5 mr-2" />
+                {error}
+              </p>
+              <button onClick={() => setError(null)} className="text-red-700 hover:text-red-900">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
         </div>
-        
-        {/* Input Area */}
-        <form onSubmit={handleSendClick} className="p-4 border-t border-gray-200 flex space-x-3">
-          <input
-            type="text"
-            className="flex-grow p-3 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 transition-shadow duration-200"
-            placeholder="Type your message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
-            disabled={!input.trim() || isLoading}
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </form>
-      </div>
+      </main>
+
+      {/* Input Form */}
+      <footer className="w-full bg-white border-t border-gray-200 p-4 sticky bottom-0 z-10">
+        <div className="max-w-3xl mx-auto">
+          <form onSubmit={handleSubmit} className="flex space-x-3">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask the AI marketing assistant..."
+              disabled={isLoading}
+              className="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 transition duration-150"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-300 transition duration-150 shadow-md"
+            >
+              {isLoading ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : (
+                <Send className="w-6 h-6" />
+              )}
+            </button>
+          </form>
+        </div>
+      </footer>
     </div>
   );
 };
 
+// CRITICAL: This line ensures the component can be imported by index.tsx
 export default App;
-
