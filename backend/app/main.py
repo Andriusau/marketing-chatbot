@@ -13,7 +13,7 @@ import time
 # --- Configuration ---
 # You would normally load your API key from an environment variable
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 SYSTEM_INSTRUCTION = "You are a friendly, highly persuasive marketing lead development chatbot for a modern data engineering consultancy. Your goal is to qualify leads by asking about their technical needs, current challenges, and budget. Keep responses concise and focused on gathering information. Do not mention that you are an AI."
 
 # --- Models ---
