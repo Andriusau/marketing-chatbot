@@ -62,7 +62,7 @@ const App: React.FC = () => {
       const botResponse: Message = {
         id: Date.now() + 1,
         sender: 'bot',
-        text: data.bot_response || "I didn't quite catch that. Could you rephrase?"
+        text: data.response || "I didn't quite catch that. Could you rephrase?"
       };
 
       setMessages((prev) => [...prev, botResponse]);
