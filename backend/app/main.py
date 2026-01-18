@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import requests
 import json
 import time
@@ -80,12 +84,12 @@ def call_gemini_api(user_message: str, history: list) -> str:
             # Handle connection errors, timeouts, etc.
             print(f"API call failed on attempt {attempt+1}: {e}")
             if attempt < 2:
-                time.sleep(2 ** attempt) # Wait before retrying (simple exponential backoff idea)
+                time.sleep(2 ** attempt) # Wait before retrying
             else:
-                return "I'm having trouble connecting to the service. Please try again in a moment."
+                return f"I'm having trouble connecting to the service. Error: {str(e)}"
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-            return "An internal error occurred."
+            return f"An internal error occurred: {str(e)}"
 
     return "Service unavailable."
 
