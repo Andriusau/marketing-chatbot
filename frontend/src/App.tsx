@@ -45,14 +45,14 @@ const App: React.FC = () => {
 
     const history = messages.map(m => ({
       role: m.sender === 'user' ? 'user' : 'model',
-      text: m.text
+      parts: [{ text: m.text }]
     }));
 
     try {
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_message: userMessage, history: history }),
+        body: JSON.stringify({ message: userMessage, chat_history: history }),
       });
 
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -115,8 +115,8 @@ const App: React.FC = () => {
               {/* Avatar */}
               <div
                 className={`flex-none w-8 h-8 rounded-full flex items-center justify-center shadow-sm ${msg.sender === 'user'
-                    ? 'bg-indigo-100 text-indigo-600'
-                    : 'bg-white border border-slate-200 text-emerald-600'
+                  ? 'bg-indigo-100 text-indigo-600'
+                  : 'bg-white border border-slate-200 text-emerald-600'
                   }`}
               >
                 {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
@@ -125,8 +125,8 @@ const App: React.FC = () => {
               {/* Message Bubble */}
               <div
                 className={`relative max-w-[85%] sm:max-w-[75%] px-5 py-3.5 shadow-sm text-[15px] leading-relaxed ${msg.sender === 'user'
-                    ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm'
-                    : 'bg-white text-slate-700 border border-slate-200 rounded-2xl rounded-tl-sm'
+                  ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm'
+                  : 'bg-white text-slate-700 border border-slate-200 rounded-2xl rounded-tl-sm'
                   }`}
               >
                 {msg.text.split('\n').map((line, i) => (
@@ -183,8 +183,8 @@ const App: React.FC = () => {
               type="submit"
               disabled={!input.trim() || isLoading}
               className={`p-3.5 rounded-xl flex items-center justify-center transition-all duration-200 shadow-md ${!input.trim() || isLoading
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-200 hover:-translate-y-0.5 active:translate-y-0'
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-200 hover:-translate-y-0.5 active:translate-y-0'
                 }`}
             >
               {isLoading ? (

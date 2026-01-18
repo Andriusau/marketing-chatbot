@@ -20,7 +20,7 @@ SYSTEM_INSTRUCTION = "You are a friendly, highly persuasive marketing lead devel
 class ChatRequest(BaseModel):
     """Defines the structure for an incoming chat message."""
     message: str
-    chat_history: list # We will send the full history to maintain context
+    chat_history: list = []
 
 class ChatResponse(BaseModel):
     """Defines the structure for the outgoing chat response."""
